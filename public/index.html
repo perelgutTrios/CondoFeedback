@@ -1,43 +1,399 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <meta
-      name="description"
-      content="Web site created using create-react-app"
-    />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Condo Feedback — Resident Portal (MVP)</title>
+  <meta name="description" content="Submit feedback and maintenance requests to your condo management." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Crect width='256' height='256' rx='48' fill='%230ea5e9'/%3E%3Cpath d='M64 176h128v24H64zM96 112h64v56H96zM48 80h160v32H48z' fill='white'/%3E%3C/svg%3E" />
+  <!-- TailwindCSS for quick, clean styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Prefer system dark mode */
+    @media (prefers-color-scheme: dark) {
+      :root { color-scheme: dark; }
+      body { background: #0b1220; }
+    }
+  </style>
+</head>
+<body class="min-h-screen antialiased text-slate-900 dark:text-slate-100">
+  <!-- Top bar -->
+  <header class="sticky top-0 z-10 border-b border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-900/70 backdrop-blur">
+    <div class="mx-auto max-w-4xl px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="h-9 w-9 rounded-xl bg-sky-500 grid place-content-center shadow-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" class="h-5 w-5">
+            <path d="M3 7h18M3 12h18M3 17h18" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg font-semibold leading-tight">Condo Feedback</h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Resident submission portal — MVP vertical slice</p>
+        </div>
+      </div>
+      <nav class="text-sm">
+        <a href="#" class="hover:underline">Home</a>
+        <span class="mx-2 text-slate-400">•</span>
+        <a href="/admin" class="hover:underline">Admin</a>
+      </nav>
+    </div>
+  </header>
 
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
-    -->
-    <title>React App</title>
-  </head>
-  <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+  <main class="mx-auto max-w-4xl px-4 py-6">
     <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
+    <!-- No-JS fallback -->
+    <noscript>
+      <div class="rounded-xl border border-amber-300 bg-amber-50 text-amber-800 p-4 mt-4">
+        This page requires JavaScript to submit feedback. Please enable JavaScript or contact management directly.
+      </div>
+    </noscript>
+  </main>
 
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
+  <footer class="mx-auto max-w-4xl px-4 pb-10 pt-4 text-center text-xs text-slate-500 dark:text-slate-400">
+    &copy; <span id="year"></span> Condo Feedback MVP. For demonstration purposes. Do not submit confidential information.
+  </footer>
 
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
-  </body>
+  <!-- React 18 (UMD) + Babel for the demo. For production, bundle with Vite/Webpack. -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useEffect, useMemo, useState } = React;
+
+    // --- Utilities ---------------------------------------------------------
+    const API_BASE = window.__API_BASE || "/api/v1"; // override via window.__API_BASE if needed
+
+    function classNames(...xs) { return xs.filter(Boolean).join(' '); }
+
+    function Spinner({ label = "Submitting..." }) {
+      return (
+        <div role="status" aria-live="polite" className="inline-flex items-center gap-2 text-sm">
+          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+          </svg>
+          <span>{label}</span>
+        </div>
+      );
+    }
+
+    function Field({ id, label, hint, required, children }) {
+      const requiredMark = required ? <span className="text-rose-500" aria-hidden>*</span> : null;
+      return (
+        <div className="space-y-1">
+          <label htmlFor={id} className="block text-sm font-medium">{label} {requiredMark}</label>
+          {children}
+          {hint && <p id={`${id}-hint`} className="text-xs text-slate-500">{hint}</p>}
+        </div>
+      );
+    }
+
+    function Notice({ tone = 'info', title, children, onClose }) {
+      const tones = {
+        info:   { base: 'border-sky-300 bg-sky-50 text-sky-900 dark:border-sky-700/60 dark:bg-sky-950/50', icon: '#0284c7' },
+        warn:   { base: 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/50', icon: '#b45309' },
+        error:  { base: 'border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-700/60 dark:bg-rose-950/50', icon: '#be123c' },
+        success:{ base: 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-700/60 dark:bg-emerald-950/50', icon: '#047857' },
+      };
+      const t = tones[tone] ?? tones.info;
+      return (
+        <div className={classNames('rounded-xl border p-3 sm:p-4 flex items-start gap-3', t.base)}>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={t.icon} className="h-5 w-5 mt-0.5" aria-hidden>
+            <circle cx="12" cy="12" r="10" opacity=".1" fill={t.icon}></circle>
+            <path d="M12 8.5v6M12 16.5v.5m0-11a1 1 0 110 2 1 1 0 010-2z" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+          </svg>
+          <div className="flex-1 text-sm">
+            {title && <p className="font-medium mb-1">{title}</p>}
+            <div>{children}</div>
+          </div>
+          {onClose && (
+            <button onClick={onClose} className="text-xs opacity-70 hover:opacity-100">Close</button>
+          )}
+        </div>
+      );
+    }
+
+    // --- Submit Feedback Form --------------------------------------------
+    function SubmitFeedbackForm() {
+      const [form, setForm] = useState({
+        title: '',
+        body: '',
+        category_id: '',
+        zone: '',
+        is_anonymous: false,
+        last_name: '',
+        unit: '',
+        urgency: '',
+        copy_pm: false,
+      });
+      const [busy, setBusy] = useState(false);
+      const [result, setResult] = useState(null);
+      const [error, setError] = useState(null);
+
+      const canSubmit = form.title.trim() && form.body.trim();
+
+      async function onSubmit(e) {
+        e.preventDefault();
+        setError(null);
+        if (!canSubmit) return;
+        setBusy(true);
+        try {
+          const res = await fetch(`${API_BASE}/submissions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: form.title.trim(),
+              body: form.body.trim(),
+              category_id: form.category_id ? Number(form.category_id) : null,
+              building_zone: form.zone || null,
+              is_anonymous: !!form.is_anonymous,
+              resident_last_name: form.is_anonymous ? null : (form.last_name.trim() || null),
+              resident_unit: form.is_anonymous ? null : (form.unit.trim() || null),
+              urgency: form.urgency || null,
+              priority: (function(u){
+                switch(u){
+                  case 'urgent': return 'urgent';
+                  case 'important': return 'high';
+                  case 'maintenance': return 'normal';
+                  case 'other': return 'low';
+                  default: return null;
+                }
+              })(form.urgency),
+              copy_property_manager: !!form.copy_pm,
+            }),
+          });
+
+          if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`Server responded ${res.status}: ${text || res.statusText}`);
+          }
+
+          const data = await res.json();
+          setResult(data);
+          setForm({ title: '', body: '', category_id: '', zone: '', is_anonymous: false, last_name: '', unit: '', urgency: '', copy_pm: false });
+        } catch (err) {
+          setError(err.message || 'Unexpected error.');
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      return (
+        <section aria-labelledby="form-title" className="grid gap-6">
+          <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white dark:bg-slate-900 shadow-sm">
+            <div className="p-4 sm:p-6 border-b border-slate-200/60 dark:border-slate-700/60">
+              <h2 id="form-title" className="text-lg font-semibold">Submit Feedback / Request</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Please keep personal information to a minimum. You may submit anonymously.</p>
+            </div>
+            <form onSubmit={onSubmit} className="p-4 sm:p-6 grid gap-4">
+              {/* Anonymity toggle moved to top */}
+              <div className="flex items-center gap-3">
+                <input
+                  id="anonymous"
+                  name="anonymous"
+                  type="checkbox"
+                  checked={form.is_anonymous}
+                  onChange={(e) => setForm({ ...form, is_anonymous: e.target.checked })}
+                  className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                />
+                <label htmlFor="anonymous" className="text-sm">Submit anonymously</label>
+              </div>
+
+              {/* Identity fields (enabled only when not anonymous) */}
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Field id="last_name" label="Last Name" hint="Required if not submitting anonymously." required={!form.is_anonymous}>
+                  <input
+                    id="last_name"
+                    name="last_name"
+                    value={form.last_name}
+                    onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                    disabled={form.is_anonymous}
+                    required={!form.is_anonymous}
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white/80 dark:bg-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-60"
+                    placeholder="e.g., Smith"
+                  />
+                </Field>
+
+                <Field id="unit" label="Unit Number" hint="Required if not submitting anonymously." required={!form.is_anonymous}>
+                  <input
+                    id="unit"
+                    name="unit"
+                    value={form.unit}
+                    onChange={(e) => setForm({ ...form, unit: e.target.value })}
+                    disabled={form.is_anonymous}
+                    required={!form.is_anonymous}
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white/80 dark:bg-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-60"
+                    placeholder="e.g., 1203"
+                  />
+                </Field>
+              </div>
+
+              {/* Category, Urgency & Location (moved above Title/Details) */}
+              <div className="grid sm:grid-cols-3 gap-4">
+                <Field id="category" label="Category" hint="Choose the best fit.">
+                  <select
+                    id="category"
+                    name="category"
+                    value={form.category_id}
+                    onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white/80 dark:bg-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  >
+                    <option value="">Uncategorized</option>
+                    <option value="1">HVAC</option>
+                    <option value="2">Plumbing</option>
+                    <option value="3">Noise</option>
+                    <option value="4">Smells</option>
+                    <option value="5">Hallway</option>
+                    <option value="6">Lobby</option>
+                    <option value="7">Garage</option>
+                    <option value="8">Recreation Facilities</option>
+                    <option value="9">Garbage/Recycling</option>
+                  </select>
+                </Field>
+
+                <Field id="urgency" label="Urgency" hint="If 'Urgent', please also notify the concierge immediately.">
+                  <select
+                    id="urgency"
+                    name="urgency"
+                    value={form.urgency}
+                    onChange={(e) => setForm({ ...form, urgency: e.target.value })}
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white/80 dark:bg-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  >
+                    <option value="">Select urgency</option>
+                    <option value="urgent">Urgent (must report to concierge as well as filing this report)</option>
+                    <option value="important">Important</option>
+                    <option value="maintenance">Maintenance</option>
+                    <option value="other">Other</option>
+                  </select>
+                </Field>
+
+                <Field id="zone" label="Location / Zone" hint="e.g., Unit 1203, P1 Garage, North Elevator">
+                  <input
+                    id="zone"
+                    name="zone"
+                    value={form.zone}
+                    onChange={(e) => setForm({ ...form, zone: e.target.value })}
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white/80 dark:bg-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    placeholder="e.g., Lobby, West Stairwell"
+                  />
+                </Field>
+              </div>
+
+              {/* Title */}
+              <Field id="title" label="Title" required hint="One short sentence that summarizes your feedback.">
+                <input
+                  id="title"
+                  name="title"
+                  required
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white/80 dark:bg-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  placeholder="e.g., Water leak near south stairwell"
+                />
+              </Field>
+
+              {/* Details */}
+              <Field id="details" label="Details" required hint="Provide clear, factual details. Avoid personal data if possible.">
+                <textarea
+                  id="details"
+                  name="details"
+                  required
+                  rows="6"
+                  value={form.body}
+                  onChange={(e) => setForm({ ...form, body: e.target.value })}
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white/80 dark:bg-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  placeholder="Describe what happened, where, and when..."
+                ></textarea>
+              </Field>
+
+              {/* Notices */}
+              {error && (
+                <Notice tone="error" title="Submission failed">
+                  <p className="text-sm">{error}</p>
+                </Notice>
+              )}
+
+              {result && (
+                <Notice tone="success" title="Thanks! Your ticket was created.">
+                  <p className="text-sm">Reference ID: <code className="px-1 py-0.5 rounded bg-slate-200/70 dark:bg-slate-700/60">{result.id}</code></p>
+                  <p className="text-xs mt-1 text-slate-500">You will be notified as it progresses.</p>
+                </Notice>
+              )}
+
+              {/* Buttons */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2">
+                <div className="flex items-center gap-2 order-2 sm:order-1">
+                  <input
+                    id="copy_pm"
+                    name="copy_pm"
+                    type="checkbox"
+                    checked={form.copy_pm}
+                    onChange={(e) => setForm({ ...form, copy_pm: e.target.checked })}
+                    className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                  />
+                  <label htmlFor="copy_pm" className="text-sm">Copy Property Manager</label>
+                </div>
+                <div className="flex items-center gap-3 order-1 sm:order-2">
+                  <button
+                    type="submit"
+                    disabled={busy || !canSubmit}
+                    className={classNames(
+                      'inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium shadow-sm',
+                      busy || !canSubmit ? 'bg-slate-300 dark:bg-slate-700 cursor-not-allowed' : 'bg-sky-600 hover:bg-sky-700 text-white'
+                    )}
+                  >
+                    {busy ? <Spinner label="Submitting" /> : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+                          <path d="M5 12h14M12 5l7 7-7 7" />
+                        </svg>
+                        Submit to Assistant Property Manager
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setForm({ title: '', body: '', category_id: '', zone: '', is_anonymous: false, last_name: '', unit: '', urgency: '', copy_pm: false }); setError(null); }}
+                    className="rounded-xl px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          {/* Optional: Quick info tiles */}
+          <div className="grid sm:grid-cols-3 gap-3">
+            <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Average Response</p>
+              <p className="text-2xl font-semibold mt-1">&lt; 24h</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Privacy</p>
+              <p className="text-sm mt-1">Anonymous submissions allowed</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500">SLA Target</p>
+              <p className="text-sm mt-1">72 hours to resolve (typical)</p>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function App() {
+      useEffect(() => { document.getElementById('year').textContent = new Date().getFullYear(); }, []);
+      return (
+        <div className="grid gap-6">
+          <SubmitFeedbackForm />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
 </html>
