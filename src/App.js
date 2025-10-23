@@ -65,10 +65,10 @@ function App() {
     setIsSubmitting(true);
     
     try {
-      // EmailJS configuration (you'll need to set these up)
-      const serviceID = 'service_xxxxxxxxx'; // Replace with your EmailJS service ID
-      const templateID = 'template_xxxxxxxxx'; // Replace with your EmailJS template ID
-      const publicKey = 'your_public_key'; // Replace with your EmailJS public key
+      // EmailJS configuration - REPLACE THESE WITH YOUR ACTUAL EMAILJS CREDENTIALS
+      const serviceID = 'YOUR_SERVICE_ID_HERE';     // From EmailJS Email Services
+      const templateID = 'YOUR_TEMPLATE_ID_HERE';   // From EmailJS Email Templates  
+      const publicKey = 'YOUR_PUBLIC_KEY_HERE';     // From EmailJS Account settings
 
       const templateParams = {
         to_email: 'perelgut@gmail.com',
@@ -83,13 +83,15 @@ function App() {
         is_anonymous: anonymous ? 'Yes' : 'No'
       };
 
-      // For prototype - just simulate email sending
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Uncomment this when you have EmailJS configured:
-      // await emailjs.send(serviceID, templateID, templateParams, publicKey);
-      
-      alert(`Feedback submitted successfully!\n\nDetails:\nFamily: ${anonymous ? 'Anonymous' : formData.familyName}\nUnit: ${anonymous ? 'Anonymous' : formData.unitNumber}\nTopic: ${formData.topic}\nUrgency: ${formData.urgency}\nSubject: ${formData.subject}\nAnonymous: ${anonymous ? 'Yes' : 'No'}\n\nThis would be sent to: perelgut@gmail.com`);
+      // Check if EmailJS is configured
+      if (serviceID === 'YOUR_SERVICE_ID_HERE' || templateID === 'YOUR_TEMPLATE_ID_HERE' || publicKey === 'YOUR_PUBLIC_KEY_HERE') {
+        // Prototype mode - show what would be sent
+        alert(`📧 PROTOTYPE MODE - Email would be sent to perelgut@gmail.com\n\n✅ To enable real emails:\n1. Set up EmailJS account at emailjs.com\n2. Replace the placeholder IDs in App.js\n3. See EMAILJS_SETUP.md for detailed instructions\n\n📋 Form Data:\nFamily: ${anonymous ? 'Anonymous' : formData.familyName}\nUnit: ${anonymous ? 'Anonymous' : formData.unitNumber}\nTopic: ${formData.topic}\nUrgency: ${formData.urgency}\nSubject: ${formData.subject}\nAnonymous: ${anonymous ? 'Yes' : 'No'}`);
+      } else {
+        // Real email sending
+        await emailjs.send(serviceID, templateID, templateParams, publicKey);
+        alert(`✅ Feedback sent successfully to perelgut@gmail.com!\n\nYour message about "${formData.subject}" has been delivered.`);
+      }
       
       // Reset form
       setFormData({
