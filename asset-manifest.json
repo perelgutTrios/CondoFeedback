@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/CondoFeedback/static/css/main.4d829c8d.css",
+    "main.js": "/CondoFeedback/static/js/main.119e797a.js",
+    "index.html": "/CondoFeedback/index.html",
+    "main.4d829c8d.css.map": "/CondoFeedback/static/css/main.4d829c8d.css.map",
+    "main.119e797a.js.map": "/CondoFeedback/static/js/main.119e797a.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.4d829c8d.css",
+    "static/js/main.119e797a.js"
+  ]
+}
