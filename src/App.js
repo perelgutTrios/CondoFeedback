@@ -66,9 +66,9 @@ function App() {
     
     try {
       // EmailJS configuration - REPLACE THESE WITH YOUR ACTUAL EMAILJS CREDENTIALS
-      const serviceID = 'YOUR_SERVICE_ID_HERE';     // From EmailJS Email Services
-      const templateID = 'YOUR_TEMPLATE_ID_HERE';   // From EmailJS Email Templates  
-      const publicKey = 'YOUR_PUBLIC_KEY_HERE';     // From EmailJS Account settings
+      const serviceID = 'service_qva1rqm';     // From EmailJS Email Services
+      const templateID = 'template_ry5de2o';   // From EmailJS Email Templates  
+      const publicKey = 'CoVhsU9wD16o75WI-';     // From EmailJS Account settings
 
       const templateParams = {
         to_email: 'perelgut@gmail.com',
