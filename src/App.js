@@ -68,8 +68,8 @@ function App() {
     try {
       // Save submission locally first (most reliable)
       const submissionData = {
-        familyName: anonymous ? 'Anonymous' : formData.familyName,
-        unitNumber: anonymous ? 'Anonymous' : formData.unitNumber,
+        familyName: anonymous ? 'ANONYMOUS' : formData.familyName,
+        unitNumber: anonymous ? '0' : formData.unitNumber,
         topic: formData.topic,
         urgency: formData.urgency,
         subject: formData.subject,
@@ -95,8 +95,6 @@ function App() {
         subject: submissionData.subject,
         message: submissionData.comment,
         button_type: buttonType,
-        copy_pm: copyPM ? 'Yes' : 'No',
-        is_anonymous: anonymous ? 'Yes' : 'No',
         submission_id: storageResult.id || 'Not saved'
       };
 
@@ -135,9 +133,8 @@ Details:
 Family: ${submissionData.familyName}
 Unit: ${submissionData.unitNumber}
 Topic: ${submissionData.topic}
-Urgency: ${submissionData.urgency}
-Anonymous: ${anonymous ? 'Yes' : 'No'}`);
-      
+Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: Yes' : ''}`);
+
       // Reset form only if local save was successful
       if (storageResult.success) {
         setFormData({

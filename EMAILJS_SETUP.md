@@ -17,27 +17,24 @@ To enable **REAL EMAIL SENDING** to perelgut@gmail.com, follow these steps:
 
 ### 3. Create Email Template
 - Dashboard → "Email Templates" → "Create New Template"
-- **Template Name:** `Condo Feedback`
-- **Subject:** `Condo Feedback - {{subject}}`
+- **Template Name:** `Essex Condo Feedback`
+- **Subject:** `Essex Feedback - {{topic}} - {{urgency}}`
 - **Content:**
 ```
-New feedback from Condo Portal:
+New feedback submitted to Essex Portal:
 
-From: {{from_name}}
-Unit: {{unit_number}}
-Topic: {{topic}}
-Urgency: {{urgency}}
-Anonymous: {{is_anonymous}}
+FROM: {{from_name}} (Unit {{unit_number}})
+TOPIC: {{topic}}
+URGENCY: {{urgency}}
 
-Subject: {{subject}}
+SUBJECT: {{subject}}
 
-Message:
+MESSAGE:
 {{message}}
 
 ---
-Sent via Condo Feedback Portal
-Type: {{button_type}}
-Copy PM: {{copy_pm}}
+Submission ID: {{submission_id}}
+Sent via Essex Feedback Portal
 ```
 - **Copy the Template ID** (e.g., `template_xyz789`)
 
