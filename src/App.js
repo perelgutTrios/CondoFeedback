@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import emailjs from '@emailjs/browser';
+import { FeedbackStorage } from './services/FeedbackStorage';
 import './App.css';
 
 function App() {
@@ -65,6 +66,21 @@ function App() {
     setIsSubmitting(true);
     
     try {
+      // Save submission locally first (most reliable)
+      const submissionData = {
+        familyName: anonymous ? 'Anonymous' : formData.familyName,
+        unitNumber: anonymous ? 'Anonymous' : formData.unitNumber,
+        topic: formData.topic,
+        urgency: formData.urgency,
+        subject: formData.subject,
+        comment: formData.comment || 'No comment provided',
+        isAnonymous: anonymous,
+        copyPM: copyPM,
+        buttonType: buttonType
+      };
+      
+      const storageResult = FeedbackStorage.saveSubmission(submissionData);
+      
       // EmailJS configuration - REPLACE THESE WITH YOUR ACTUAL EMAILJS CREDENTIALS
       const serviceID = 'service_qva1rqm';     // From EmailJS Email Services
       const templateID = 'template_ry5de2o';   // From EmailJS Email Templates  
@@ -72,42 +88,73 @@ function App() {
 
       const templateParams = {
         to_email: 'perelgut@gmail.com',
-        from_name: anonymous ? 'Anonymous' : formData.familyName,
-        unit_number: anonymous ? 'Anonymous' : formData.unitNumber,
-        topic: formData.topic,
-        urgency: formData.urgency,
-        subject: formData.subject,
-        message: formData.comment,
+        from_name: submissionData.familyName,
+        unit_number: submissionData.unitNumber,
+        topic: submissionData.topic,
+        urgency: submissionData.urgency,
+        subject: submissionData.subject,
+        message: submissionData.comment,
         button_type: buttonType,
         copy_pm: copyPM ? 'Yes' : 'No',
-        is_anonymous: anonymous ? 'Yes' : 'No'
+        is_anonymous: anonymous ? 'Yes' : 'No',
+        submission_id: storageResult.id || 'Not saved'
       };
 
-      // Check if EmailJS is configured
-      if (serviceID === 'YOUR_SERVICE_ID_HERE' || templateID === 'YOUR_TEMPLATE_ID_HERE' || publicKey === 'YOUR_PUBLIC_KEY_HERE') {
-        // Prototype mode - show what would be sent
-        alert(`📧 PROTOTYPE MODE - Email would be sent to perelgut@gmail.com\n\n✅ To enable real emails:\n1. Set up EmailJS account at emailjs.com\n2. Replace the placeholder IDs in App.js\n3. See EMAILJS_SETUP.md for detailed instructions\n\n📋 Form Data:\nFamily: ${anonymous ? 'Anonymous' : formData.familyName}\nUnit: ${anonymous ? 'Anonymous' : formData.unitNumber}\nTopic: ${formData.topic}\nUrgency: ${formData.urgency}\nSubject: ${formData.subject}\nAnonymous: ${anonymous ? 'Yes' : 'No'}`);
-      } else {
-        // Real email sending
-        await emailjs.send(serviceID, templateID, templateParams, publicKey);
-        alert(`✅ Feedback sent successfully to perelgut@gmail.com!\n\nYour message about "${formData.subject}" has been delivered.`);
+      let emailStatus = '';
+      
+      try {
+        // Check if EmailJS is configured
+        if (serviceID === 'YOUR_SERVICE_ID_HERE' || templateID === 'YOUR_TEMPLATE_ID_HERE' || publicKey === 'YOUR_PUBLIC_KEY_HERE') {
+          // Prototype mode - show what would be sent
+          emailStatus = '📧 PROTOTYPE MODE - Email would be sent to perelgut@gmail.com';
+        } else {
+          // Real email sending
+          await emailjs.send(serviceID, templateID, templateParams, publicKey);
+          emailStatus = '📧 Email sent to perelgut@gmail.com';
+        }
+      } catch (emailError) {
+        console.error('Email failed:', emailError);
+        emailStatus = '⚠️ Email failed (submission still saved locally)';
+      }
+
+      // Show comprehensive results
+      const successIcon = storageResult.success ? '✅' : '⚠️';
+      const totalSubmissions = FeedbackStorage.getSubmissionCount();
+      
+      alert(`${successIcon} Feedback Submitted Successfully!
+
+Your message about "${formData.subject}" has been processed:
+
+💾 Saved locally (ID: ${storageResult.id || 'Failed'})
+${emailStatus}
+
+📊 Total submissions saved: ${totalSubmissions}
+📋 Data is automatically backed up in your browser
+
+Details:
+Family: ${submissionData.familyName}
+Unit: ${submissionData.unitNumber}
+Topic: ${submissionData.topic}
+Urgency: ${submissionData.urgency}
+Anonymous: ${anonymous ? 'Yes' : 'No'}`);
+      
+      // Reset form only if local save was successful
+      if (storageResult.success) {
+        setFormData({
+          familyName: '',
+          unitNumber: '',
+          topic: 'No Topic',
+          urgency: 'Other',
+          subject: '',
+          comment: ''
+        });
+        setCopyPM(false);
+        setAnonymous(false);
       }
       
-      // Reset form
-      setFormData({
-        familyName: '',
-        unitNumber: '',
-        topic: 'No Topic',
-        urgency: 'Other',
-        subject: '',
-        comment: ''
-      });
-      setCopyPM(false);
-      setAnonymous(false);
-      
     } catch (error) {
-      console.error('Error sending email:', error);
-      alert('Error sending feedback. Please try again.');
+      console.error('Error submitting feedback:', error);
+      alert(`❌ Error submitting feedback: ${error.message}\n\nPlease try again or contact the administrator.`);
     } finally {
       setIsSubmitting(false);
     }
@@ -274,6 +321,103 @@ function App() {
           </label>
         </div>
       </form>
+
+      {/* Admin Panel */}
+      <AdminPanel />
+    </div>
+  );
+}
+
+// Simple Admin Panel Component
+function AdminPanel() {
+  const [submissionCount, setSubmissionCount] = useState(0);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const updateCount = () => {
+    setSubmissionCount(FeedbackStorage.getSubmissionCount());
+  };
+
+  const handleExportCSV = () => {
+    const result = FeedbackStorage.exportAsCSV();
+    if (result.success) {
+      alert(`✅ Exported ${result.count} submissions to ${result.filename}`);
+      updateCount();
+    }
+  };
+
+  const handleExportJSON = () => {
+    const result = FeedbackStorage.exportAsJSON();
+    if (result.success) {
+      alert(`✅ Backup created: ${result.filename}`);
+      updateCount();
+    }
+  };
+
+  const handleClearData = () => {
+    const result = FeedbackStorage.clearAllSubmissions();
+    if (result.success) {
+      alert(result.message);
+      updateCount();
+    }
+  };
+
+  const handleViewRecent = () => {
+    const recent = FeedbackStorage.getRecentSubmissions(5);
+    if (recent.length === 0) {
+      alert('No submissions found');
+      return;
+    }
+    
+    const summary = recent.map(sub => 
+      `${sub.submittedAt} - ${sub.subject} (${sub.topic})`
+    ).join('\\n');
+    
+    alert(`Recent Submissions (${recent.length}):\\n\\n${summary}\\n\\nUse Export CSV for full details`);
+  };
+
+  // Update count on component mount
+  React.useEffect(() => {
+    updateCount();
+  }, []);
+
+  return (
+    <div className="admin-panel">
+      <div className="admin-header" onClick={() => setIsExpanded(!isExpanded)}>
+        🔧 Admin Panel ({submissionCount} submissions) {isExpanded ? '▼' : '▶'}
+      </div>
+      
+      {isExpanded && (
+        <div className="admin-content">
+          <div className="admin-stats">
+            <p>📊 Total Submissions: <strong>{submissionCount}</strong></p>
+            <p>💾 Storage: Browser localStorage (persistent)</p>
+          </div>
+          
+          <div className="admin-actions">
+            <button onClick={handleViewRecent} className="admin-btn view">
+              👁️ View Recent (5)
+            </button>
+            <button onClick={handleExportCSV} className="admin-btn export">
+              📊 Export CSV
+            </button>
+            <button onClick={handleExportJSON} className="admin-btn backup">
+              💾 Backup JSON
+            </button>
+            <button onClick={handleClearData} className="admin-btn danger">
+              🗑️ Clear All Data
+            </button>
+            <button onClick={updateCount} className="admin-btn refresh">
+              🔄 Refresh Count
+            </button>
+          </div>
+          
+          <div className="admin-info">
+            <p><strong>Export CSV:</strong> Open in Excel/Google Sheets for analysis</p>
+            <p><strong>Backup JSON:</strong> Technical backup for data migration</p>
+            <p><strong>Data Persistence:</strong> Stored in browser, survives page refreshes</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
