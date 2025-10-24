@@ -32,16 +32,38 @@ body {
 
 .name-unit-row {
   display: flex;
-  gap: 10px;
-  align-items: flex-end;
+  gap: 15px;
+  align-items: flex-start;
 }
 
 .name-field {
   flex: 2; /* 67% approximately */
+  display: flex;
+  flex-direction: column;
 }
 
 .unit-field {
   flex: 1; /* 33% approximately */
+  display: flex;
+  flex-direction: column;
+}
+
+.topic-urgency-row {
+  display: flex;
+  gap: 15px;
+  align-items: flex-start;
+}
+
+.topic-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.urgency-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 label {
@@ -94,12 +116,12 @@ button.send {
     flex-direction: column;
   }
   
-  .name-unit-row {
+  .name-unit-row, .topic-urgency-row {
     flex-direction: column;
     gap: 10px;
   }
   
-  .name-field, .unit-field {
+  .name-field, .unit-field, .topic-field, .urgency-field {
     flex: 1;
   }
 }

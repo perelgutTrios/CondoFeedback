@@ -185,42 +185,48 @@ function App() {
           </div>
         </div>
 
-        <label>Topic *</label>
-        <select 
-          name="topic"
-          value={formData.topic}
-          onChange={handleInputChange}
-        >
-          <option value="No Topic">-- Select Topic --</option>
-          <option>Plumbing</option>
-          <option>HVAC</option>
-          <option>Hallway</option>
-          <option>In-Unit</option>
-          <option>Lobby</option>
-          <option>Garage</option>
-          <option>Recreation Facilities</option>
-          <option>Party Room</option>
-          <option>Meeting Rooms</option>
-          <option>Golf Room</option>
-          <option>Fitness Room</option>
-          <option>Pool and Hot Tub</option>
-          <option>Pool Tables</option>
-          <option>Lockers</option>
-          <option>Other</option>
-        </select>
+        <div className="topic-urgency-row">
+          <div className="topic-field">
+            <label>Topic *</label>
+            <select 
+              name="topic"
+              value={formData.topic}
+              onChange={handleInputChange}
+            >
+              <option value="No Topic">-- Select Topic --</option>
+              <option>Plumbing</option>
+              <option>HVAC</option>
+              <option>Hallway</option>
+              <option>In-Unit</option>
+              <option>Lobby</option>
+              <option>Garage</option>
+              <option>Recreation Facilities</option>
+              <option>Party Room</option>
+              <option>Meeting Rooms</option>
+              <option>Golf Room</option>
+              <option>Fitness Room</option>
+              <option>Pool and Hot Tub</option>
+              <option>Pool Tables</option>
+              <option>Lockers</option>
+              <option>Other</option>
+            </select>
+          </div>
 
-        <label>Urgency *</label>
-        <select 
-          name="urgency"
-          value={formData.urgency}
-          onChange={handleInputChange}
-        >
-          <option value="Other">-- Select Urgency --</option>
-          <option>Urgent (Must report to concierge as well as here)</option>
-          <option>Important</option>
-          <option>Troublesome</option>
-          <option>Compliments</option>
-        </select>
+          <div className="urgency-field">
+            <label>Urgency *</label>
+            <select 
+              name="urgency"
+              value={formData.urgency}
+              onChange={handleInputChange}
+            >
+              <option value="Other">-- Select Urgency --</option>
+              <option>Urgent (Must report to concierge as well as here)</option>
+              <option>Important</option>
+              <option>Troublesome</option>
+              <option>Compliments</option>
+            </select>
+          </div>
+        </div>
 
         <label>Subject *</label>
         <input 
