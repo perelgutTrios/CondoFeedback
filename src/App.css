@@ -249,6 +249,107 @@ button.send {
   color: #003366;
 }
 
+/* Admin Authentication Styles */
+.auth-indicator {
+  color: #28a745;
+  font-size: 12px;
+}
+
+.admin-login {
+  padding: 0;
+}
+
+.login-form {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.login-header {
+  text-align: center;
+  color: #003366;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.login-field {
+  margin-bottom: 12px;
+}
+
+.login-field label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 4px;
+  color: #333;
+  font-size: 12px;
+}
+
+.login-field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.login-field input:focus {
+  border-color: #003366;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 51, 102, 0.2);
+}
+
+.login-error {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+  padding: 8px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  text-align: center;
+}
+
+.login-actions {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.admin-btn.login {
+  background-color: #003366;
+  color: white;
+  padding: 10px 20px;
+  min-width: 120px;
+}
+
+.admin-btn.login:hover:not(:disabled) {
+  background-color: #004080;
+}
+
+.admin-btn.login:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.admin-btn.logout {
+  background-color: #6c757d;
+  color: white;
+}
+
+.admin-btn.logout:hover {
+  background-color: #545b62;
+}
+
+.login-info {
+  text-align: center;
+  color: #6c757d;
+}
+
+.login-info small {
+  font-size: 10px;
+}
+
 @media (max-width: 600px) {
   .admin-actions {
     flex-direction: column;
@@ -256,5 +357,9 @@ button.send {
   
   .admin-btn {
     min-width: auto;
+  }
+  
+  .login-field input {
+    font-size: 16px; /* Prevent zoom on iOS */
   }
 }

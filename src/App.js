@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import emailjs from '@emailjs/browser';
 import { FeedbackStorage } from './services/FeedbackStorage';
+import { CryptoUtils } from './services/CryptoUtils';
 import './App.css';
 
 function App() {
@@ -325,16 +326,60 @@ Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: Yes' : '
   );
 }
 
-// Simple Admin Panel Component
+// Password-Protected Admin Panel Component
 function AdminPanel() {
   const [submissionCount, setSubmissionCount] = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState('');
 
   const updateCount = () => {
     setSubmissionCount(FeedbackStorage.getSubmissionCount());
   };
 
+  const checkAuthStatus = () => {
+    setIsAuthenticated(CryptoUtils.isAdminLoggedIn());
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setIsLoggingIn(true);
+    setLoginError('');
+    
+    try {
+      const result = await CryptoUtils.loginAdmin(password);
+      
+      if (result.success) {
+        setIsAuthenticated(true);
+        setPassword('');
+        setLoginError('');
+        updateCount();
+        // Extend session on activity
+        CryptoUtils.extendSession();
+      } else {
+        setLoginError(result.message);
+        setPassword('');
+      }
+    } catch (error) {
+      setLoginError('Authentication error occurred');
+      setPassword('');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleLogout = () => {
+    CryptoUtils.logoutAdmin();
+    setIsAuthenticated(false);
+    setIsExpanded(false);
+    setPassword('');
+    setLoginError('');
+  };
+
   const handleExportCSV = () => {
+    CryptoUtils.extendSession();
     const result = FeedbackStorage.exportAsCSV();
     if (result.success) {
       alert(`✅ Exported ${result.count} submissions to ${result.filename}`);
@@ -343,6 +388,7 @@ function AdminPanel() {
   };
 
   const handleExportJSON = () => {
+    CryptoUtils.extendSession();
     const result = FeedbackStorage.exportAsJSON();
     if (result.success) {
       alert(`✅ Backup created: ${result.filename}`);
@@ -351,6 +397,7 @@ function AdminPanel() {
   };
 
   const handleClearData = () => {
+    CryptoUtils.extendSession();
     const result = FeedbackStorage.clearAllSubmissions();
     if (result.success) {
       alert(result.message);
@@ -359,6 +406,7 @@ function AdminPanel() {
   };
 
   const handleViewRecent = () => {
+    CryptoUtils.extendSession();
     const recent = FeedbackStorage.getRecentSubmissions(5);
     if (recent.length === 0) {
       alert('No submissions found');
@@ -372,47 +420,113 @@ function AdminPanel() {
     alert(`Recent Submissions (${recent.length}):\\n\\n${summary}\\n\\nUse Export CSV for full details`);
   };
 
-  // Update count on component mount
+  const handlePanelToggle = () => {
+    if (!isAuthenticated) {
+      // Show login form
+      setIsExpanded(!isExpanded);
+    } else {
+      // Toggle admin panel
+      setIsExpanded(!isExpanded);
+      if (isExpanded) {
+        CryptoUtils.extendSession();
+      }
+    }
+  };
+
+  // Update count and check auth on component mount
   React.useEffect(() => {
     updateCount();
+    checkAuthStatus();
+    
+    // Check auth status periodically (for session timeout)
+    const interval = setInterval(checkAuthStatus, 60000); // Check every minute
+    return () => clearInterval(interval);
   }, []);
 
   return (
     <div className="admin-panel">
-      <div className="admin-header" onClick={() => setIsExpanded(!isExpanded)}>
+      <div className="admin-header" onClick={handlePanelToggle}>
         🔧 Admin Panel ({submissionCount} submissions) {isExpanded ? '▼' : '▶'}
+        {isAuthenticated && <span className="auth-indicator"> 🔓</span>}
       </div>
       
       {isExpanded && (
         <div className="admin-content">
-          <div className="admin-stats">
-            <p>📊 Total Submissions: <strong>{submissionCount}</strong></p>
-            <p>💾 Storage: Browser localStorage (persistent)</p>
-          </div>
-          
-          <div className="admin-actions">
-            <button onClick={handleViewRecent} className="admin-btn view">
-              👁️ View Recent (5)
-            </button>
-            <button onClick={handleExportCSV} className="admin-btn export">
-              📊 Export CSV
-            </button>
-            <button onClick={handleExportJSON} className="admin-btn backup">
-              💾 Backup JSON
-            </button>
-            <button onClick={handleClearData} className="admin-btn danger">
-              🗑️ Clear All Data
-            </button>
-            <button onClick={updateCount} className="admin-btn refresh">
-              🔄 Refresh Count
-            </button>
-          </div>
-          
-          <div className="admin-info">
-            <p><strong>Export CSV:</strong> Open in Excel/Google Sheets for analysis</p>
-            <p><strong>Backup JSON:</strong> Technical backup for data migration</p>
-            <p><strong>Data Persistence:</strong> Stored in browser, survives page refreshes</p>
-          </div>
+          {!isAuthenticated ? (
+            // Login Form
+            <div className="admin-login">
+              <form onSubmit={handleLogin} className="login-form">
+                <div className="login-header">
+                  🔒 <strong>Admin Access Required</strong>
+                </div>
+                <div className="login-field">
+                  <label htmlFor="adminPassword">Password:</label>
+                  <input
+                    type="password"
+                    id="adminPassword"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter admin password"
+                    required
+                    disabled={isLoggingIn}
+                  />
+                </div>
+                {loginError && (
+                  <div className="login-error">
+                    ❌ {loginError}
+                  </div>
+                )}
+                <div className="login-actions">
+                  <button 
+                    type="submit" 
+                    className="admin-btn login" 
+                    disabled={isLoggingIn || !password.trim()}
+                  >
+                    {isLoggingIn ? '🔄 Checking...' : '🔓 Login'}
+                  </button>
+                </div>
+                <div className="login-info">
+                  <small>🔒 Secure authentication with SHA-256 encryption</small>
+                </div>
+              </form>
+            </div>
+          ) : (
+            // Admin Panel Content (only shown when authenticated)
+            <>
+              <div className="admin-stats">
+                <p>📊 Total Submissions: <strong>{submissionCount}</strong></p>
+                <p>💾 Storage: Browser localStorage (persistent)</p>
+                <p>🔓 Admin session expires in 30 minutes</p>
+              </div>
+              
+              <div className="admin-actions">
+                <button onClick={handleViewRecent} className="admin-btn view">
+                  👁️ View Recent (5)
+                </button>
+                <button onClick={handleExportCSV} className="admin-btn export">
+                  📊 Export CSV
+                </button>
+                <button onClick={handleExportJSON} className="admin-btn backup">
+                  💾 Backup JSON
+                </button>
+                <button onClick={handleClearData} className="admin-btn danger">
+                  🗑️ Clear All Data
+                </button>
+                <button onClick={updateCount} className="admin-btn refresh">
+                  🔄 Refresh Count
+                </button>
+                <button onClick={handleLogout} className="admin-btn logout">
+                  🔒 Logout
+                </button>
+              </div>
+              
+              <div className="admin-info">
+                <p><strong>Export CSV:</strong> Open in Excel/Google Sheets for analysis</p>
+                <p><strong>Backup JSON:</strong> Technical backup for data migration</p>
+                <p><strong>Data Persistence:</strong> Stored in browser, survives page refreshes</p>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
