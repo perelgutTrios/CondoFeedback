@@ -55,32 +55,41 @@ export class FeedbackStorage {
       return;
     }
     
-    // CSV Headers
+    // CSV Headers - properly quoted for Excel
     const headers = [
-      'ID', 'Date Submitted', 'Family Name', 'Unit Number', 
-      'Topic', 'Urgency', 'Subject', 'Comment', 'Anonymous', 'Copy PM'
+      '"ID"', '"Date Submitted"', '"Family Name"', '"Unit Number"', 
+      '"Topic"', '"Urgency"', '"Subject"', '"Comment"', '"Anonymous"', '"Copy PM"'
     ];
+    
+    // Helper function to properly escape CSV values
+    const escapeCsvValue = (value) => {
+      if (value == null || value === '') return '""';
+      const stringValue = String(value);
+      // Escape quotes by doubling them, and wrap in quotes
+      return `"${stringValue.replace(/"/g, '""')}"`;
+    };
     
     // Convert submissions to CSV rows
     const csvRows = [
       headers.join(','),
       ...submissions.map(sub => [
-        sub.id,
-        `"${sub.submittedAt}"`,
-        `"${sub.familyName || ''}"`,
-        `"${sub.unitNumber || ''}"`,
-        `"${sub.topic || ''}"`,
-        `"${sub.urgency || ''}"`,
-        `"${sub.subject || ''}"`,
-        `"${(sub.comment || '').replace(/"/g, '""')}"`, // Escape quotes
-        sub.isAnonymous ? 'Yes' : 'No',
-        sub.copyPM ? 'Yes' : 'No'
+        escapeCsvValue(sub.id || ''),
+        escapeCsvValue(sub.submittedAt || ''),
+        escapeCsvValue(sub.familyName || ''),
+        escapeCsvValue(sub.unitNumber || ''),
+        escapeCsvValue(sub.topic || ''),
+        escapeCsvValue(sub.urgency || ''),
+        escapeCsvValue(sub.subject || ''),
+        escapeCsvValue(sub.comment || ''),
+        escapeCsvValue(sub.isAnonymous ? 'Yes' : 'No'),
+        escapeCsvValue(sub.copyPM ? 'Yes' : 'No')
       ].join(','))
     ];
     
-    // Create and download CSV file
-    const csvContent = csvRows.join('\\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    // Create and download CSV file with proper Windows line endings and BOM for Excel
+    const csvContent = csvRows.join('\r\n'); // Use Windows line endings for Excel compatibility
+    const BOM = '\uFEFF'; // UTF-8 BOM for proper Excel encoding
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     
     const link = document.createElement('a');
