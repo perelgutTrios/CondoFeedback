@@ -23,6 +23,25 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  background-color: rgba(0, 51, 102, 0.1); /* 10% version of header color #003366 */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 51, 102, 0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.name-unit-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.name-field {
+  flex: 2; /* 67% approximately */
+}
+
+.unit-field {
+  flex: 1; /* 33% approximately */
 }
 
 label {
@@ -30,9 +49,17 @@ label {
 }
 
 input, select, textarea {
-  padding: 8px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
+  padding: 10px;
+  border-radius: 8px; /* More rounded corners */
+  border: 1px solid #ddd;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #003366;
+  box-shadow: 0 0 0 2px rgba(0, 51, 102, 0.2);
 }
 
 textarea {
@@ -65,5 +92,14 @@ button.send {
 @media (max-width: 600px) {
   .actions, .alternative {
     flex-direction: column;
+  }
+  
+  .name-unit-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .name-field, .unit-field {
+    flex: 1;
   }
 }

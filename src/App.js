@@ -155,29 +155,35 @@ function App() {
           Submit Anonymously
         </label>
 
-        <label>Family Name</label>
-        <input 
-          type="text" 
-          name="familyName"
-          value={formData.familyName}
-          onChange={handleInputChange}
-          maxLength="100" 
-          disabled={anonymous}
-          placeholder={anonymous ? "Anonymous submission" : "Enter family name"}
-          style={{ opacity: anonymous ? 0.5 : 1 }}
-        />
+        <div className="name-unit-row">
+          <div className="name-field">
+            <label>Family Name</label>
+            <input 
+              type="text" 
+              name="familyName"
+              value={formData.familyName}
+              onChange={handleInputChange}
+              maxLength="100" 
+              disabled={anonymous}
+              placeholder={anonymous ? "Anonymous submission" : "Enter family name"}
+              style={{ opacity: anonymous ? 0.5 : 1 }}
+            />
+          </div>
 
-        <label>Unit Number</label>
-        <input 
-          type="text" 
-          name="unitNumber"
-          value={formData.unitNumber}
-          onChange={handleInputChange}
-          maxLength="10" 
-          disabled={anonymous}
-          placeholder={anonymous ? "Anonymous submission" : "Enter unit number"}
-          style={{ opacity: anonymous ? 0.5 : 1 }}
-        />
+          <div className="unit-field">
+            <label>Unit Number</label>
+            <input 
+              type="text" 
+              name="unitNumber"
+              value={formData.unitNumber}
+              onChange={handleInputChange}
+              maxLength="10" 
+              disabled={anonymous}
+              placeholder={anonymous ? "Anonymous submission" : "Enter unit number"}
+              style={{ opacity: anonymous ? 0.5 : 1 }}
+            />
+          </div>
+        </div>
 
         <label>Topic *</label>
         <select 
