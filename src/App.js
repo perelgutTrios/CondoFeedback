@@ -132,7 +132,19 @@ function App() {
 
   return (
     <div className="container">
-      <header className="header">🏢 Condo Feedback Portal</header>
+      <header className="header">
+        <img 
+          src="https://theessex.ca/wp-content/uploads/2016/12/cropped-cropped-The-Essexlogo.jpg" 
+          alt="The Essex Logo" 
+          style={{
+            height: '60px',
+            marginBottom: '10px',
+            display: 'block',
+            margin: '0 auto 15px auto'
+          }}
+        />
+        🏢 Condo Feedback Portal
+      </header>
       <form className="form" onSubmit={handleFormSubmit}>
         <label>
           <input
