@@ -167,6 +167,25 @@ function App() {
       
       const storageResult = FeedbackStorage.saveSubmission(submissionData);
       
+      // Also save to server-side CSV (when available)
+      let serverSaveResult = { success: false, message: 'Server not available' };
+      try {
+        const serverResponse = await fetch('/api/save-feedback.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(submissionData)
+        });
+        
+        if (serverResponse.ok) {
+          serverSaveResult = await serverResponse.json();
+        }
+      } catch (serverError) {
+        console.log('Server save failed (using localStorage only):', serverError.message);
+        serverSaveResult = { success: false, message: 'Server offline - using browser storage' };
+      }
+      
       // EmailJS configuration - REPLACE THESE WITH YOUR ACTUAL EMAILJS CREDENTIALS
       const serviceID = 'service_qva1rqm';     // From EmailJS Email Services
       const templateID = 'template_ry5de2o';   // From EmailJS Email Templates  
@@ -238,23 +257,36 @@ function App() {
       const successIcon = storageResult.success ? '✅' : '⚠️';
       const totalSubmissions = FeedbackStorage.getSubmissionCount();
       
+      // Build storage status message
+      let storageStatus = '';
+      if (serverSaveResult.success) {
+        storageStatus = `💾 Saved locally (ID: ${storageResult.id || 'Failed'})
+🗄️ Saved to server CSV (ID: ${serverSaveResult.id})
+📊 Server total: ${serverSaveResult.totalSubmissions || 'Unknown'}`;
+      } else {
+        storageStatus = `💾 Saved locally (ID: ${storageResult.id || 'Failed'})
+⚠️ Server save failed: ${serverSaveResult.message}
+📊 Local total: ${totalSubmissions}`;
+      }
+      
       alert(`${successIcon} Feedback Submitted Successfully!
 
 Date Sent: ${formattedDate}
 
 Your message about "${formData.subject}" has been processed:
 
-💾 Saved locally (ID: ${storageResult.id || 'Failed'})
+${storageStatus}
 ${emailStatus}
 
-📊 Total submissions saved: ${totalSubmissions}
-📋 Data is automatically backed up in your browser
+� Data backup: ${serverSaveResult.success ? 'Server + Browser' : 'Browser only'}
 
 Details:
 Last Name: ${submissionData.lastName}
 Unit: ${submissionData.unitNumber}
 Topics: ${submissionData.topics}
-Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: ' + pmEmail : ''}${copyMe ? '\\nCopy Me: ' + submissionData.email : ''}`);
+Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: ' + pmEmail : ''}${copyMe ? '\\nCopy Me: ' + submissionData.email : ''}
+
+${serverSaveResult.success ? '\\n🌐 Admin access: /api/admin.php' : ''}`);
 
       // Reset form only if local save was successful
       if (storageResult.success) {
