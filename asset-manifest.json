@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/CondoFeedback/static/css/main.afbdbd94.css",
-    "main.js": "/CondoFeedback/static/js/main.879f160b.js",
+    "main.css": "/CondoFeedback/static/css/main.e6d19ac2.css",
+    "main.js": "/CondoFeedback/static/js/main.66b3102a.js",
     "index.html": "/CondoFeedback/index.html",
-    "main.afbdbd94.css.map": "/CondoFeedback/static/css/main.afbdbd94.css.map",
-    "main.879f160b.js.map": "/CondoFeedback/static/js/main.879f160b.js.map"
+    "main.e6d19ac2.css.map": "/CondoFeedback/static/css/main.e6d19ac2.css.map",
+    "main.66b3102a.js.map": "/CondoFeedback/static/js/main.66b3102a.js.map"
   },
   "entrypoints": [
-    "static/css/main.afbdbd94.css",
-    "static/js/main.879f160b.js"
+    "static/css/main.e6d19ac2.css",
+    "static/js/main.66b3102a.js"
   ]
 }
