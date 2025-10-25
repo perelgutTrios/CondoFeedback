@@ -8,6 +8,7 @@ function App() {
   const [copyPM, setCopyPM] = useState(false);
   const [copyMe, setCopyMe] = useState(false);
   const [anonymous, setAnonymous] = useState(false);
+  const [emailError, setEmailError] = useState('');
   const [formData, setFormData] = useState({
     lastName: '',
     unitNumber: '',
@@ -18,6 +19,40 @@ function App() {
     email: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Helper function for comprehensive email validation
+  const validateEmailFormat = (email) => {
+    if (!email || !email.trim()) return { isValid: false, message: '' };
+    
+    const trimmedEmail = email.trim().toLowerCase();
+    
+    // RFC 5322 compliant email regex
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    
+    if (!emailRegex.test(trimmedEmail)) {
+      return { isValid: false, message: 'Please enter a valid email address (e.g., name@example.com)' };
+    }
+    
+    if (trimmedEmail.length > 254) {
+      return { isValid: false, message: 'Email address is too long (maximum 254 characters)' };
+    }
+    
+    const localPart = trimmedEmail.split('@')[0];
+    if (localPart.length > 64) {
+      return { isValid: false, message: 'Email username part is too long (maximum 64 characters)' };
+    }
+    
+    // Additional checks for common issues
+    if (trimmedEmail.includes('..')) {
+      return { isValid: false, message: 'Email cannot contain consecutive dots' };
+    }
+    
+    if (trimmedEmail.startsWith('.') || trimmedEmail.endsWith('.')) {
+      return { isValid: false, message: 'Email cannot start or end with a dot' };
+    }
+    
+    return { isValid: true, message: '' };
+  };
 
   const validateForm = () => {
     const errors = [];
@@ -54,9 +89,9 @@ function App() {
     
     // Validate email format if provided
     if (copyMe && formData.email.trim()) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.email.trim())) {
-        errors.push('Please enter a valid email address');
+      const emailValidation = validateEmailFormat(formData.email);
+      if (!emailValidation.isValid) {
+        errors.push(emailValidation.message);
       }
     }
     
@@ -82,6 +117,26 @@ function App() {
         ? prev.topics.filter(t => t !== topic)
         : [...prev.topics, topic]
     }));
+  };
+
+  const handleEmailBlur = () => {
+    if (copyMe && formData.email.trim()) {
+      const emailValidation = validateEmailFormat(formData.email);
+      setEmailError(emailValidation.isValid ? '' : emailValidation.message);
+    } else {
+      setEmailError('');
+    }
+  };
+
+  const handleEmailChange = (e) => {
+    setFormData(prev => ({
+      ...prev,
+      email: e.target.value
+    }));
+    // Clear error when user starts typing
+    if (emailError) {
+      setEmailError('');
+    }
   };
 
   const handleSubmit = async (buttonType) => {
@@ -117,8 +172,29 @@ function App() {
       const templateID = 'template_ry5de2o';   // From EmailJS Email Templates  
       const publicKey = 'CoVhsU9wD16o75WI-';     // From EmailJS Account settings
 
+      // Format current date for submission
+      const now = new Date();
+      const formattedDate = now.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+
+      // Build CC list
+      let ccEmails = [];
+      const pmEmail = 'propertymanager@theessex.ca'; // Property Manager's email
+      
+      if (copyPM && !anonymous) {
+        ccEmails.push(pmEmail);
+      }
+      
+      if (copyMe && formData.email) {
+        ccEmails.push(formData.email);
+      }
+
       const templateParams = {
         to_email: 'perelgut@gmail.com',
+        cc_email: ccEmails.join(','), // Comma-separated CC list
         from_name: submissionData.lastName,
         unit_number: submissionData.unitNumber,
         topic: submissionData.topics, // Now contains multiple topics
@@ -127,6 +203,8 @@ function App() {
         message: submissionData.comment,
         user_email: submissionData.email,
         copy_me: copyMe ? 'Yes' : 'No',
+        copy_pm: copyPM ? 'Yes' : 'No',
+        date_sent: formattedDate,
         button_type: buttonType,
         submission_id: storageResult.id || 'Not saved'
       };
@@ -137,11 +215,19 @@ function App() {
         // Check if EmailJS is configured
         if (serviceID === 'YOUR_SERVICE_ID_HERE' || templateID === 'YOUR_TEMPLATE_ID_HERE' || publicKey === 'YOUR_PUBLIC_KEY_HERE') {
           // Prototype mode - show what would be sent
-          emailStatus = '📧 PROTOTYPE MODE - Email would be sent to perelgut@gmail.com';
+          let ccInfo = '';
+          if (ccEmails.length > 0) {
+            ccInfo = ` (CC: ${ccEmails.join(', ')})`;
+          }
+          emailStatus = `📧 PROTOTYPE MODE - Email would be sent to perelgut@gmail.com${ccInfo}`;
         } else {
           // Real email sending
           await emailjs.send(serviceID, templateID, templateParams, publicKey);
-          emailStatus = '📧 Email sent to perelgut@gmail.com';
+          let ccInfo = '';
+          if (ccEmails.length > 0) {
+            ccInfo = ` (CC: ${ccEmails.join(', ')})`;
+          }
+          emailStatus = `📧 Email sent to perelgut@gmail.com${ccInfo}`;
         }
       } catch (emailError) {
         console.error('Email failed:', emailError);
@@ -153,6 +239,8 @@ function App() {
       const totalSubmissions = FeedbackStorage.getSubmissionCount();
       
       alert(`${successIcon} Feedback Submitted Successfully!
+
+Date Sent: ${formattedDate}
 
 Your message about "${formData.subject}" has been processed:
 
@@ -166,7 +254,7 @@ Details:
 Last Name: ${submissionData.lastName}
 Unit: ${submissionData.unitNumber}
 Topics: ${submissionData.topics}
-Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: Yes' : ''}${copyMe ? '\\nCopy Me: ' + submissionData.email : ''}`);
+Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: ' + pmEmail : ''}${copyMe ? '\\nCopy Me: ' + submissionData.email : ''}`);
 
       // Reset form only if local save was successful
       if (storageResult.success) {
@@ -182,6 +270,7 @@ Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: Yes' : '
         setCopyPM(false);
         setCopyMe(false);
         setAnonymous(false);
+        setEmailError('');
       }
       
     } catch (error) {
@@ -205,6 +294,7 @@ Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: Yes' : '
     setCopyPM(false);
     setCopyMe(false);
     setAnonymous(false);
+    setEmailError('');
   };
 
   const handleFormSubmit = (e) => {
@@ -347,11 +437,14 @@ Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: Yes' : '
               type="email" 
               name="email"
               value={formData.email}
-              onChange={handleInputChange}
-              maxLength="100" 
-              placeholder="Enter your email address"
+              onChange={handleEmailChange}
+              onBlur={handleEmailBlur}
+              maxLength="254" 
+              placeholder="Enter your email address (e.g., name@example.com)"
               required={copyMe}
+              className={emailError ? 'email-error' : ''}
             />
+            {emailError && <div className="validation-error">{emailError}</div>}
           </div>
         )}
 
