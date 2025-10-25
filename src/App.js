@@ -6,14 +6,16 @@ import './App.css';
 
 function App() {
   const [copyPM, setCopyPM] = useState(false);
+  const [copyMe, setCopyMe] = useState(false);
   const [anonymous, setAnonymous] = useState(false);
   const [formData, setFormData] = useState({
-    familyName: '',
+    lastName: '',
     unitNumber: '',
     topics: [], // Changed to array for multiple selections
     urgency: 'Other',
     subject: '',
-    comment: ''
+    comment: 'Eg. "Please have the Property Manager or Superintendent come to my unit for further details."',
+    email: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -35,10 +37,27 @@ function App() {
       errors.push('Please enter a subject');
     }
     
-    // Check if either name/unit is provided OR anonymous is checked
-    const hasNameInfo = formData.familyName.trim() || formData.unitNumber.trim();
-    if (!hasNameInfo && !anonymous) {
-      errors.push('Please provide your family name/unit number OR check the anonymous option');
+    // Check required fields when not anonymous
+    if (!anonymous) {
+      if (!formData.lastName.trim()) {
+        errors.push('Last Name is required');
+      }
+      if (!formData.unitNumber.trim()) {
+        errors.push('Unit Number is required');
+      }
+    }
+    
+    // Check email if Copy me is selected
+    if (copyMe && !formData.email.trim()) {
+      errors.push('Email is required when "Copy me" is selected');
+    }
+    
+    // Validate email format if provided
+    if (copyMe && formData.email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email.trim())) {
+        errors.push('Please enter a valid email address');
+      }
     }
     
     return errors;
@@ -78,14 +97,16 @@ function App() {
     try {
       // Save submission locally first (most reliable)
       const submissionData = {
-        familyName: anonymous ? 'ANONYMOUS' : formData.familyName,
+        lastName: anonymous ? 'ANONYMOUS' : formData.lastName,
         unitNumber: anonymous ? '0' : formData.unitNumber,
         topics: formData.topics.join(', '), // Join topics with comma for storage
         urgency: formData.urgency,
         subject: formData.subject,
         comment: formData.comment || 'No comment provided',
+        email: copyMe ? formData.email : '',
         isAnonymous: anonymous,
         copyPM: copyPM,
+        copyMe: copyMe,
         buttonType: buttonType
       };
       
@@ -98,12 +119,14 @@ function App() {
 
       const templateParams = {
         to_email: 'perelgut@gmail.com',
-        from_name: submissionData.familyName,
+        from_name: submissionData.lastName,
         unit_number: submissionData.unitNumber,
         topic: submissionData.topics, // Now contains multiple topics
         urgency: submissionData.urgency,
         subject: submissionData.subject,
         message: submissionData.comment,
+        user_email: submissionData.email,
+        copy_me: copyMe ? 'Yes' : 'No',
         button_type: buttonType,
         submission_id: storageResult.id || 'Not saved'
       };
@@ -140,22 +163,24 @@ ${emailStatus}
 📋 Data is automatically backed up in your browser
 
 Details:
-Family: ${submissionData.familyName}
+Last Name: ${submissionData.lastName}
 Unit: ${submissionData.unitNumber}
 Topics: ${submissionData.topics}
-Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: Yes' : ''}`);
+Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: Yes' : ''}${copyMe ? '\\nCopy Me: ' + submissionData.email : ''}`);
 
       // Reset form only if local save was successful
       if (storageResult.success) {
         setFormData({
-          familyName: '',
+          lastName: '',
           unitNumber: '',
           topics: [],
           urgency: 'Other',
           subject: '',
-          comment: ''
+          comment: 'Eg. "Please have the Property Manager or Superintendent come to my unit for further details."',
+          email: ''
         });
         setCopyPM(false);
+        setCopyMe(false);
         setAnonymous(false);
       }
       
@@ -169,14 +194,16 @@ Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: Yes' : '
 
   const handleCancel = () => {
     setFormData({
-      familyName: '',
+      lastName: '',
       unitNumber: '',
       topics: [],
       urgency: 'Other',
       subject: '',
-      comment: ''
+      comment: 'Eg. "Please have the Property Manager or Superintendent come to my unit for further details."',
+      email: ''
     });
     setCopyPM(false);
+    setCopyMe(false);
     setAnonymous(false);
   };
 
@@ -211,21 +238,22 @@ Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: Yes' : '
 
         <div className="name-unit-row">
           <div className="name-field">
-            <label>Family Name</label>
+            <label>Last Name *</label>
             <input 
               type="text" 
-              name="familyName"
-              value={formData.familyName}
+              name="lastName"
+              value={formData.lastName}
               onChange={handleInputChange}
               maxLength="100" 
               disabled={anonymous}
-              placeholder={anonymous ? "Anonymous submission" : "Enter family name"}
+              placeholder={anonymous ? "Anonymous submission" : "Enter last name"}
               style={{ opacity: anonymous ? 0.5 : 1 }}
+              required={!anonymous}
             />
           </div>
 
           <div className="unit-field">
-            <label>Unit Number</label>
+            <label>Unit Number *</label>
             <input 
               type="text" 
               name="unitNumber"
@@ -235,6 +263,7 @@ Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: Yes' : '
               disabled={anonymous}
               placeholder={anonymous ? "Anonymous submission" : "Enter unit number"}
               style={{ opacity: anonymous ? 0.5 : 1 }}
+              required={!anonymous}
             />
           </div>
         </div>
@@ -286,7 +315,7 @@ Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: Yes' : '
               <option>Urgent (Must report to concierge as well as here)</option>
               <option>Important</option>
               <option>Troublesome</option>
-              <option>Compliments</option>
+              <option>Non-Urgent</option>
             </select>
           </div>
         </div>
@@ -310,6 +339,22 @@ Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: Yes' : '
           placeholder="Enter your comment or feedback"
         ></textarea>
 
+        {/* Email field - only show if Copy me is checked */}
+        {copyMe && (
+          <div className="email-field">
+            <label>Email *</label>
+            <input 
+              type="email" 
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              maxLength="100" 
+              placeholder="Enter your email address"
+              required={copyMe}
+            />
+          </div>
+        )}
+
         <div className="alternative">
           <button 
             type="button" 
@@ -327,14 +372,24 @@ Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: Yes' : '
           >
             {isSubmitting ? 'Sending...' : 'Submit'}
           </button>
-          <label>
-            <input
-              type="checkbox"
-              checked={copyPM}
-              onChange={() => setCopyPM(!copyPM)}
-            />
-            Copy Property Manager
-          </label>
+          <div className="checkbox-group">
+            <label>
+              <input
+                type="checkbox"
+                checked={copyPM}
+                onChange={() => setCopyPM(!copyPM)}
+              />
+              Copy Property Manager
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={copyMe}
+                onChange={() => setCopyMe(!copyMe)}
+              />
+              Copy me
+            </label>
+          </div>
         </div>
       </form>
 
