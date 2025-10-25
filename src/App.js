@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import emailjs from '@emailjs/browser';
 import { FeedbackStorage } from './services/FeedbackStorage';
 import { CryptoUtils } from './services/CryptoUtils';
+import { GitHubCSVStorage } from './services/GitHubCSVStorage';
 import './App.css';
 
 function App() {
@@ -167,23 +168,19 @@ function App() {
       
       const storageResult = FeedbackStorage.saveSubmission(submissionData);
       
-      // Also save to server-side CSV (when available)
-      let serverSaveResult = { success: false, message: 'Server not available' };
-      try {
-        const serverResponse = await fetch('/api/save-feedback.php', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(submissionData)
-        });
-        
-        if (serverResponse.ok) {
-          serverSaveResult = await serverResponse.json();
+      // Also save to GitHub CSV (when configured)
+      let githubSaveResult = { success: false, message: 'GitHub not configured' };
+      const githubStorage = new GitHubCSVStorage();
+      
+      if (githubStorage.isConfigured()) {
+        try {
+          githubSaveResult = await githubStorage.saveSubmission(submissionData);
+        } catch (githubError) {
+          console.log('GitHub save failed (using localStorage only):', githubError.message);
+          githubSaveResult = { success: false, message: 'GitHub save failed - using browser storage' };
         }
-      } catch (serverError) {
-        console.log('Server save failed (using localStorage only):', serverError.message);
-        serverSaveResult = { success: false, message: 'Server offline - using browser storage' };
+      } else {
+        githubSaveResult = { success: false, message: 'GitHub token not configured' };
       }
       
       // EmailJS configuration - REPLACE THESE WITH YOUR ACTUAL EMAILJS CREDENTIALS
@@ -259,13 +256,13 @@ function App() {
       
       // Build storage status message
       let storageStatus = '';
-      if (serverSaveResult.success) {
+      if (githubSaveResult.success) {
         storageStatus = `💾 Saved locally (ID: ${storageResult.id || 'Failed'})
-🗄️ Saved to server CSV (ID: ${serverSaveResult.id})
-📊 Server total: ${serverSaveResult.totalSubmissions || 'Unknown'}`;
+🗄️ Saved to GitHub CSV (ID: ${githubSaveResult.id})
+📊 GitHub total: ${githubSaveResult.totalSubmissions || 'Unknown'}`;
       } else {
         storageStatus = `💾 Saved locally (ID: ${storageResult.id || 'Failed'})
-⚠️ Server save failed: ${serverSaveResult.message}
+⚠️ GitHub save: ${githubSaveResult.message}
 📊 Local total: ${totalSubmissions}`;
       }
       
@@ -278,7 +275,7 @@ Your message about "${formData.subject}" has been processed:
 ${storageStatus}
 ${emailStatus}
 
-� Data backup: ${serverSaveResult.success ? 'Server + Browser' : 'Browser only'}
+📋 Data backup: ${githubSaveResult.success ? 'GitHub + Browser' : 'Browser only'}
 
 Details:
 Last Name: ${submissionData.lastName}
@@ -286,7 +283,7 @@ Unit: ${submissionData.unitNumber}
 Topics: ${submissionData.topics}
 Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: ' + pmEmail : ''}${copyMe ? '\\nCopy Me: ' + submissionData.email : ''}
 
-${serverSaveResult.success ? '\\n🌐 Admin access: /api/admin.php' : ''}`);
+${githubSaveResult.success ? '\\n🌐 CSV Download: GitHub repository data folder' : ''}`);
 
       // Reset form only if local save was successful
       if (storageResult.success) {
@@ -594,6 +591,24 @@ function AdminPanel() {
     }
   };
 
+  const handleGitHubDownload = () => {
+    CryptoUtils.extendSession();
+    const githubStorage = new GitHubCSVStorage();
+    
+    if (githubStorage.isConfigured()) {
+      const downloadUrl = githubStorage.getDownloadURL();
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `essex-feedback-github-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      alert(`✅ Downloading GitHub CSV file\n\nDirect URL: ${downloadUrl}`);
+    } else {
+      alert(`⚠️ GitHub CSV not configured\n\nTo enable:\n1. Create GitHub Personal Access Token\n2. Update GitHubCSVStorage.js with your token\n3. Rebuild and deploy\n\nSee GITHUB_PAGES_CSV_SETUP.md for details`);
+    }
+  };
+
   const handleClearData = () => {
     CryptoUtils.extendSession();
     const result = FeedbackStorage.clearAllSubmissions();
@@ -707,6 +722,9 @@ function AdminPanel() {
                 <button onClick={handleExportJSON} className="admin-btn backup">
                   💾 Backup JSON
                 </button>
+                <button onClick={handleGitHubDownload} className="admin-btn github">
+                  🌐 GitHub CSV
+                </button>
                 <button onClick={handleClearData} className="admin-btn danger">
                   🗑️ Clear All Data
                 </button>
@@ -721,7 +739,8 @@ function AdminPanel() {
               <div className="admin-info">
                 <p><strong>Export CSV:</strong> Open in Excel/Google Sheets for analysis</p>
                 <p><strong>Backup JSON:</strong> Technical backup for data migration</p>
-                <p><strong>Data Persistence:</strong> Stored in browser, survives page refreshes</p>
+                <p><strong>GitHub CSV:</strong> Download repository CSV (if configured)</p>
+                <p><strong>Data Persistence:</strong> Stored in browser + GitHub repository</p>
               </div>
             </>
           )}
