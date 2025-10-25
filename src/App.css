@@ -66,6 +66,41 @@ body {
   flex-direction: column;
 }
 
+.topic-checkboxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px;
+  background-color: white;
+}
+
+.topic-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: normal !important;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.topic-checkbox:hover {
+  background-color: rgba(0, 51, 102, 0.05);
+}
+
+.topic-checkbox input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+  transform: scale(1.1);
+}
+
 label {
   font-weight: bold;
 }
@@ -123,6 +158,11 @@ button.send {
   
   .name-field, .unit-field, .topic-field, .urgency-field {
     flex: 1;
+  }
+  
+  .topic-checkboxes {
+    grid-template-columns: 1fr;
+    max-height: 150px;
   }
 }
 

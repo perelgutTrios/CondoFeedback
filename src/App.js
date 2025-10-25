@@ -10,7 +10,7 @@ function App() {
   const [formData, setFormData] = useState({
     familyName: '',
     unitNumber: '',
-    topic: 'No Topic',
+    topics: [], // Changed to array for multiple selections
     urgency: 'Other',
     subject: '',
     comment: ''
@@ -20,9 +20,9 @@ function App() {
   const validateForm = () => {
     const errors = [];
     
-    // Check if topic is selected (not default)
-    if (formData.topic === 'No Topic') {
-      errors.push('Please select a topic');
+    // Check if at least one topic is selected
+    if (formData.topics.length === 0) {
+      errors.push('Please select at least one topic');
     }
     
     // Check if urgency is selected (not default)
@@ -56,6 +56,15 @@ function App() {
     }));
   };
 
+  const handleTopicChange = (topic) => {
+    setFormData(prev => ({
+      ...prev,
+      topics: prev.topics.includes(topic) 
+        ? prev.topics.filter(t => t !== topic)
+        : [...prev.topics, topic]
+    }));
+  };
+
   const handleSubmit = async (buttonType) => {
     const validationErrors = validateForm();
     
@@ -71,7 +80,7 @@ function App() {
       const submissionData = {
         familyName: anonymous ? 'ANONYMOUS' : formData.familyName,
         unitNumber: anonymous ? '0' : formData.unitNumber,
-        topic: formData.topic,
+        topics: formData.topics.join(', '), // Join topics with comma for storage
         urgency: formData.urgency,
         subject: formData.subject,
         comment: formData.comment || 'No comment provided',
@@ -91,7 +100,7 @@ function App() {
         to_email: 'perelgut@gmail.com',
         from_name: submissionData.familyName,
         unit_number: submissionData.unitNumber,
-        topic: submissionData.topic,
+        topic: submissionData.topics, // Now contains multiple topics
         urgency: submissionData.urgency,
         subject: submissionData.subject,
         message: submissionData.comment,
@@ -133,7 +142,7 @@ ${emailStatus}
 Details:
 Family: ${submissionData.familyName}
 Unit: ${submissionData.unitNumber}
-Topic: ${submissionData.topic}
+Topics: ${submissionData.topics}
 Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: Yes' : ''}`);
 
       // Reset form only if local save was successful
@@ -141,7 +150,7 @@ Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: Yes' : '
         setFormData({
           familyName: '',
           unitNumber: '',
-          topic: 'No Topic',
+          topics: [],
           urgency: 'Other',
           subject: '',
           comment: ''
@@ -162,7 +171,7 @@ Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: Yes' : '
     setFormData({
       familyName: '',
       unitNumber: '',
-      topic: 'No Topic',
+      topics: [],
       urgency: 'Other',
       subject: '',
       comment: ''
@@ -232,29 +241,38 @@ Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: Yes' : '
 
         <div className="topic-urgency-row">
           <div className="topic-field">
-            <label>Topic *</label>
-            <select 
-              name="topic"
-              value={formData.topic}
-              onChange={handleInputChange}
-            >
-              <option value="No Topic">-- Select Topic --</option>
-              <option>Plumbing</option>
-              <option>HVAC</option>
-              <option>Hallway</option>
-              <option>In-Unit</option>
-              <option>Lobby</option>
-              <option>Garage</option>
-              <option>Recreation Facilities</option>
-              <option>Party Room</option>
-              <option>Meeting Rooms</option>
-              <option>Golf Room</option>
-              <option>Fitness Room</option>
-              <option>Pool and Hot Tub</option>
-              <option>Pool Tables</option>
-              <option>Lockers</option>
-              <option>Other</option>
-            </select>
+            <label>Topics * (Select all that apply)</label>
+            <div className="topic-checkboxes">
+              {[
+                'Plumbing',
+                'HVAC',
+                'Hallway',
+                'In-Unit',
+                'Lobby',
+                'Garage',
+                'Recreation Facilities',
+                'Party Room',
+                'Meeting Rooms',
+                'Golf Room',
+                'Fitness Room',
+                'Pool and Hot Tub',
+                'Pool Tables',
+                'Lockers',
+                'Noise',
+                'Smells',
+                'Leaks',
+                'Other'
+              ].map(topic => (
+                <label key={topic} className="topic-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={formData.topics.includes(topic)}
+                    onChange={() => handleTopicChange(topic)}
+                  />
+                  {topic}
+                </label>
+              ))}
+            </div>
           </div>
 
           <div className="urgency-field">
