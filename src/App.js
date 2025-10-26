@@ -10,13 +10,14 @@ function App() {
   const [copyMe, setCopyMe] = useState(false);
   const [anonymous, setAnonymous] = useState(false);
   const [emailError, setEmailError] = useState('');
+  const [isCommentPlaceholder, setIsCommentPlaceholder] = useState(true);
   const [formData, setFormData] = useState({
     lastName: '',
     unitNumber: '',
     topics: [], // Changed to array for multiple selections
     urgency: 'Other',
     subject: '',
-    comment: 'Eg. "Please have the Property Manager or Superintendent come to my unit for further details."',
+    comment: '',
     email: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -140,6 +141,30 @@ function App() {
     }
   };
 
+  const handleCommentFocus = () => {
+    if (isCommentPlaceholder) {
+      setFormData(prev => ({
+        ...prev,
+        comment: ''
+      }));
+      setIsCommentPlaceholder(false);
+    }
+  };
+
+  const handleCommentBlur = () => {
+    if (formData.comment.trim() === '') {
+      setIsCommentPlaceholder(true);
+    }
+  };
+
+  const handleCommentChange = (e) => {
+    setFormData(prev => ({
+      ...prev,
+      comment: e.target.value
+    }));
+    setIsCommentPlaceholder(false);
+  };
+
   const handleSubmit = async (buttonType) => {
     const validationErrors = validateForm();
     
@@ -158,7 +183,7 @@ function App() {
         topics: formData.topics.join(', '), // Join topics with comma for storage
         urgency: formData.urgency,
         subject: formData.subject,
-        comment: formData.comment || 'No comment provided',
+        comment: (isCommentPlaceholder || !formData.comment.trim()) ? 'No comment provided' : formData.comment,
         email: copyMe ? formData.email : '',
         isAnonymous: anonymous,
         copyPM: copyPM,
@@ -169,18 +194,14 @@ function App() {
       const storageResult = FeedbackStorage.saveSubmission(submissionData);
       
       // Also save to GitHub CSV (when configured)
-      let githubSaveResult = { success: false, message: 'GitHub not configured' };
       const githubStorage = new GitHubCSVStorage();
       
       if (githubStorage.isConfigured()) {
         try {
-          githubSaveResult = await githubStorage.saveSubmission(submissionData);
+          await githubStorage.saveSubmission(submissionData);
         } catch (githubError) {
           console.log('GitHub save failed (using localStorage only):', githubError.message);
-          githubSaveResult = { success: false, message: 'GitHub save failed - using browser storage' };
         }
-      } else {
-        githubSaveResult = { success: false, message: 'GitHub token not configured' };
       }
       
       // EmailJS configuration - REPLACE THESE WITH YOUR ACTUAL EMAILJS CREDENTIALS
@@ -225,65 +246,21 @@ function App() {
         submission_id: storageResult.id || 'Not saved'
       };
 
-      let emailStatus = '';
-      
       try {
         // Check if EmailJS is configured
         if (serviceID === 'YOUR_SERVICE_ID_HERE' || templateID === 'YOUR_TEMPLATE_ID_HERE' || publicKey === 'YOUR_PUBLIC_KEY_HERE') {
           // Prototype mode - show what would be sent
-          let ccInfo = '';
-          if (ccEmails.length > 0) {
-            ccInfo = ` (CC: ${ccEmails.join(', ')})`;
-          }
-          emailStatus = `📧 PROTOTYPE MODE - Email would be sent to perelgut@gmail.com${ccInfo}`;
+          console.log('PROTOTYPE MODE - Email would be sent with:', templateParams);
         } else {
           // Real email sending
           await emailjs.send(serviceID, templateID, templateParams, publicKey);
-          let ccInfo = '';
-          if (ccEmails.length > 0) {
-            ccInfo = ` (CC: ${ccEmails.join(', ')})`;
-          }
-          emailStatus = `📧 Email sent to perelgut@gmail.com${ccInfo}`;
+          console.log('Email sent successfully');
         }
       } catch (emailError) {
         console.error('Email failed:', emailError);
-        emailStatus = '⚠️ Email failed (submission still saved locally)';
       }
 
-      // Show comprehensive results
-      const successIcon = storageResult.success ? '✅' : '⚠️';
-      const totalSubmissions = FeedbackStorage.getSubmissionCount();
-      
-      // Build storage status message
-      let storageStatus = '';
-      if (githubSaveResult.success) {
-        storageStatus = `💾 Saved locally (ID: ${storageResult.id || 'Failed'})
-🗄️ Saved to GitHub CSV (ID: ${githubSaveResult.id})
-📊 GitHub total: ${githubSaveResult.totalSubmissions || 'Unknown'}`;
-      } else {
-        storageStatus = `💾 Saved locally (ID: ${storageResult.id || 'Failed'})
-⚠️ GitHub save: ${githubSaveResult.message}
-📊 Local total: ${totalSubmissions}`;
-      }
-      
-      alert(`${successIcon} Feedback Submitted Successfully!
-
-Date Sent: ${formattedDate}
-
-Your message about "${formData.subject}" has been processed:
-
-${storageStatus}
-${emailStatus}
-
-📋 Data backup: ${githubSaveResult.success ? 'GitHub + Browser' : 'Browser only'}
-
-Details:
-Last Name: ${submissionData.lastName}
-Unit: ${submissionData.unitNumber}
-Topics: ${submissionData.topics}
-Urgency: ${submissionData.urgency}${copyPM && !anonymous ? '\\nCopy PM: ' + pmEmail : ''}${copyMe ? '\\nCopy Me: ' + submissionData.email : ''}
-
-${githubSaveResult.success ? '\\n🌐 CSV Download: GitHub repository data folder' : ''}`);
+      alert('Feedback Submitted Successfully');
 
       // Reset form only if local save was successful
       if (storageResult.success) {
@@ -293,13 +270,14 @@ ${githubSaveResult.success ? '\\n🌐 CSV Download: GitHub repository data folde
           topics: [],
           urgency: 'Other',
           subject: '',
-          comment: 'Eg. "Please have the Property Manager or Superintendent come to my unit for further details."',
+          comment: '',
           email: ''
         });
         setCopyPM(false);
         setCopyMe(false);
         setAnonymous(false);
         setEmailError('');
+        setIsCommentPlaceholder(true);
       }
       
     } catch (error) {
@@ -317,13 +295,14 @@ ${githubSaveResult.success ? '\\n🌐 CSV Download: GitHub repository data folde
       topics: [],
       urgency: 'Other',
       subject: '',
-      comment: 'Eg. "Please have the Property Manager or Superintendent come to my unit for further details."',
+      comment: '',
       email: ''
     });
     setCopyPM(false);
     setCopyMe(false);
     setAnonymous(false);
     setEmailError('');
+    setIsCommentPlaceholder(true);
   };
 
   const handleFormSubmit = (e) => {
@@ -452,10 +431,13 @@ ${githubSaveResult.success ? '\\n🌐 CSV Download: GitHub repository data folde
         <label>Comment</label>
         <textarea 
           name="comment"
-          value={formData.comment}
-          onChange={handleInputChange}
+          value={isCommentPlaceholder ? 'Eg. "Please have the Property Manager or Superintendent come to my unit for further details."' : formData.comment}
+          onChange={handleCommentChange}
+          onFocus={handleCommentFocus}
+          onBlur={handleCommentBlur}
           maxLength="2500"
           placeholder="Enter your comment or feedback"
+          className={isCommentPlaceholder ? 'comment-placeholder' : ''}
         ></textarea>
 
         {/* Email field - only show if Copy me is checked */}

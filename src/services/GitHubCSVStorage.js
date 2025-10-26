@@ -6,19 +6,21 @@
 
 class GitHubCSVStorage {
   constructor() {
-    // GitHub repository information
-    this.owner = 'perelgutTrios';
-    this.repo = 'CondoFeedback';
-    this.branch = 'deployAndSave';
-    this.csvPath = 'data/essex-feedback.csv';
+    // GitHub repository configuration from environment variables
+    this.owner = process.env.REACT_APP_GITHUB_OWNER || 'perelgutTrios';
+    this.repo = process.env.REACT_APP_GITHUB_REPO || 'CondoFeedback';
+    this.branch = process.env.REACT_APP_GITHUB_BRANCH || 'deployAndSave';
+    this.csvPath = process.env.REACT_APP_GITHUB_CSV_PATH || 'data/essex-feedback.csv';
     
-    // GitHub Personal Access Token (create at github.com/settings/tokens)
+    // GitHub Personal Access Token from environment variable
+    // Create at: https://github.com/settings/tokens
     // Only needs 'repo' scope for private repos or 'public_repo' for public repos
-    this.token = 'YOUR_GITHUB_TOKEN_HERE'; // Replace with actual token
+    this.token = process.env.REACT_APP_GITHUB_TOKEN;
   }
 
   async saveSubmission(submissionData) {
     try {
+      
       // Format submission as CSV row
       const timestamp = new Date().toISOString();
       const submissionId = `feedback_${Date.now()}`;
@@ -42,10 +44,18 @@ class GitHubCSVStorage {
       // Get current CSV content
       const currentContent = await this.getCurrentCSV();
       
-      // Add new row
-      const newContent = currentContent + '\n' + csvRow.map(field => 
-        typeof field === 'string' && field.includes(',') ? `"${field}"` : field
-      ).join(',');
+      // Add new row with proper CSV escaping for Excel compatibility
+      const escapedRow = csvRow.map(field => {
+        // Convert to string and escape quotes and commas
+        const stringField = String(field || '');
+        if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
+          return `"${stringField.replace(/"/g, '""')}"`;
+        }
+        return stringField;
+      }).join(',');
+      
+      // Use Windows line endings (\r\n) for better Excel compatibility
+      const newContent = currentContent + '\r\n' + escapedRow;
 
       // Update file in GitHub
       await this.updateGitHubFile(newContent);
@@ -94,7 +104,7 @@ class GitHubCSVStorage {
           'Copy Me',
           'Submit Type'
         ];
-        return headers.join(',');
+        return headers.join(','); // Headers will get \r\n when first row is added
       }
 
       if (!response.ok) {
@@ -130,10 +140,13 @@ class GitHubCSVStorage {
         // File doesn't exist yet, that's okay
       }
 
-      // Update or create file
+      // Update or create file with UTF-8 BOM for Excel compatibility
+      const BOM = '\uFEFF'; // UTF-8 BOM for proper Excel encoding
+      const contentWithBOM = BOM + content;
+      
       const updateData = {
         message: `Add feedback submission - ${new Date().toISOString()}`,
-        content: btoa(content), // Encode content as base64
+        content: btoa(unescape(encodeURIComponent(contentWithBOM))), // Properly encode UTF-8 with BOM
         branch: this.branch
       };
 
@@ -171,7 +184,7 @@ class GitHubCSVStorage {
 
   // Check if GitHub storage is configured
   isConfigured() {
-    return this.token && this.token !== 'YOUR_GITHUB_TOKEN_HERE';
+    return this.token && this.token !== 'your_github_token_here' && this.token.length > 20;
   }
 }
 

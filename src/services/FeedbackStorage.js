@@ -57,33 +57,39 @@ export class FeedbackStorage {
     
     // CSV Headers - properly quoted for Excel
     const headers = [
-      '"ID"', '"Date Submitted"', '"Family Name"', '"Unit Number"', 
-      '"Topic"', '"Urgency"', '"Subject"', '"Comment"', '"Anonymous"', '"Copy PM"'
+      '"ID"', '"Date Submitted"', '"Last Name"', '"Unit Number"', 
+      '"Topics"', '"Urgency"', '"Subject"', '"Comment"', '"Anonymous"', '"Copy PM"'
     ];
     
     // Helper function to properly escape CSV values
     const escapeCsvValue = (value) => {
       if (value == null || value === '') return '""';
       const stringValue = String(value);
-      // Escape quotes by doubling them, and wrap in quotes
       return `"${stringValue.replace(/"/g, '""')}"`;
     };
     
     // Convert submissions to CSV rows
+    console.log('CSV Export - Processing submissions:', submissions);
+    
     const csvRows = [
       headers.join(','),
-      ...submissions.map(sub => [
-        escapeCsvValue(sub.id || ''),
-        escapeCsvValue(sub.submittedAt || ''),
-        escapeCsvValue(sub.familyName || ''),
-        escapeCsvValue(sub.unitNumber || ''),
-        escapeCsvValue(sub.topic || ''),
-        escapeCsvValue(sub.urgency || ''),
-        escapeCsvValue(sub.subject || ''),
-        escapeCsvValue(sub.comment || ''),
-        escapeCsvValue(sub.isAnonymous ? 'Yes' : 'No'),
-        escapeCsvValue(sub.copyPM ? 'Yes' : 'No')
-      ].join(','))
+      ...submissions.map(sub => {
+        const lastNameValue = sub.lastName || sub.familyName || '';
+        const topicsValue = sub.topics || sub.topic || '';
+        
+        return [
+          escapeCsvValue(sub.id || ''),
+          escapeCsvValue(sub.submittedAt || ''),
+          escapeCsvValue(lastNameValue),
+          escapeCsvValue(sub.unitNumber || ''),
+          escapeCsvValue(topicsValue),
+          escapeCsvValue(sub.urgency || ''),
+          escapeCsvValue(sub.subject || ''),
+          escapeCsvValue(sub.comment || ''),
+          escapeCsvValue(sub.isAnonymous ? 'Yes' : 'No'),
+          escapeCsvValue(sub.copyPM ? 'Yes' : 'No')
+        ].join(',');
+      })
     ];
     
     // Create and download CSV file with proper Windows line endings and BOM for Excel

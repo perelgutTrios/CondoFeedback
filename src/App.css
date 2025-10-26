@@ -124,6 +124,11 @@ textarea {
   height: 100px;
 }
 
+.comment-placeholder {
+  color: #999 !important;
+  font-style: italic;
+}
+
 .actions, .alternative {
   display: flex;
   gap: 10px;
