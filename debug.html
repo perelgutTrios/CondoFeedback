@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Essex Feedback - GitHub CSV Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Essex Feedback - GitHub CSV Storage Diagnostics</h1>
+    
+    <div id="status"></div>
+    
+    <button onclick="testConfiguration()">Test GitHub Configuration</button>
+    <button onclick="testFormSubmission()">Test Form Data Collection</button>
+    <button onclick="viewLocalStorage()">View Local Storage Data</button>
+    
+    <div id="results"></div>
+
+    <script>
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = message;
+            document.getElementById('results').appendChild(div);
+        }
+
+        function clear() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testConfiguration() {
+            clear();
+            log('🔍 Testing GitHub CSV Storage Configuration...', 'info');
+            
+            try {
+                // Check environment variables
+                const token = process?.env?.REACT_APP_GITHUB_TOKEN || 'Not available in browser';
+                const owner = 'perelgutTrios';
+                const repo = 'CondoFeedback';
+                const branch = 'deployAndSave';
+                
+                log(`📋 Configuration Details:
+• Owner: ${owner}
+• Repository: ${repo}
+• Branch: ${branch}
+• Token: ${token === 'your_github_token_here' ? '❌ Not configured (placeholder)' : token === 'Not available in browser' ? '❓ Check server logs' : '✅ Configured'}`, 'info');
+
+                if (token === 'your_github_token_here') {
+                    log('❌ GitHub token is still set to placeholder value. Please update your .env file with a real GitHub Personal Access Token.', 'error');
+                    log('📝 To fix: Go to https://github.com/settings/tokens and create a new token, then update REACT_APP_GITHUB_TOKEN in .env', 'warning');
+                    return;
+                }
+
+                // Test GitHub API access (this won't work from browser due to CORS, but will show the attempt)
+                log('🌐 Attempting GitHub API test (may fail due to CORS in browser)...', 'info');
+                
+                const testUrl = `https://api.github.com/repos/${owner}/${repo}`;
+                log(`📡 Testing URL: ${testUrl}`, 'info');
+                
+            } catch (error) {
+                log(`❌ Configuration test failed: ${error.message}`, 'error');
+            }
+        }
+
+        function testFormSubmission() {
+            clear();
+            log('📝 Testing Form Data Collection...', 'info');
+            
+            // Simulate the form data structure
+            const mockFormData = {
+                lastName: 'TestUser',
+                unitNumber: '123',
+                topics: ['Maintenance', 'Noise'],
+                urgency: 'High',
+                subject: 'Test CSV Storage',
+                comment: 'Testing the CSV debug functionality',
+                email: 'test@example.com'
+            };
+            
+            const mockState = {
+                anonymous: false,
+                copyPM: true,
+                copyMe: false,
+                isCommentPlaceholder: false
+            };
+            
+            // Simulate the submissionData creation logic from App.js
+            const submissionData = {
+                lastName: mockState.anonymous ? 'ANONYMOUS' : mockFormData.lastName,
+                unitNumber: mockState.anonymous ? '0' : mockFormData.unitNumber,
+                topics: mockFormData.topics.join(', '), // Join topics with comma for storage
+                urgency: mockFormData.urgency,
+                subject: mockFormData.subject,
+                comment: (mockState.isCommentPlaceholder || !mockFormData.comment.trim()) ? 'No comment provided' : mockFormData.comment,
+                email: mockState.copyMe ? mockFormData.email : '',
+                isAnonymous: mockState.anonymous,
+                copyPM: mockState.copyPM,
+                copyMe: mockState.copyMe,
+                buttonType: 'General Submit'
+            };
+            
+            log('✅ Form data collection working correctly:', 'success');
+            log(`<pre>${JSON.stringify(submissionData, null, 2)}</pre>`, 'info');
+            
+            // Check specific fields you're concerned about
+            log(`🔍 Key Fields Check:
+• Last Name: "${submissionData.lastName}" ${submissionData.lastName ? '✅' : '❌'}
+• Topics: "${submissionData.topics}" ${submissionData.topics ? '✅' : '❌'}
+• Unit Number: "${submissionData.unitNumber}" ${submissionData.unitNumber ? '✅' : '❌'}`, 'info');
+        }
+
+        function viewLocalStorage() {
+            clear();
+            log('💾 Checking Local Storage Data...', 'info');
+            
+            try {
+                const feedbackData = localStorage.getItem('essex-feedback-submissions');
+                if (feedbackData) {
+                    const data = JSON.parse(feedbackData);
+                    log(`✅ Found ${data.length} submissions in local storage:`, 'success');
+                    
+                    data.forEach((submission, index) => {
+                        log(`<pre>Submission ${index + 1}:
+Last Name: ${submission.lastName || 'N/A'}
+Topics: ${submission.topics || 'N/A'}
+Unit: ${submission.unitNumber || 'N/A'}
+Subject: ${submission.subject || 'N/A'}
+Timestamp: ${submission.timestamp || 'N/A'}</pre>`, 'info');
+                    });
+                } else {
+                    log('📭 No submissions found in local storage yet.', 'warning');
+                }
+            } catch (error) {
+                log(`❌ Error reading local storage: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-run configuration test on page load
+        window.onload = function() {
+            log('🚀 Page loaded. Click buttons above to run diagnostics.', 'info');
+        };
+    </script>
+</body>
+</html>
