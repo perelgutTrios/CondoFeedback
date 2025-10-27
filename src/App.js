@@ -200,7 +200,7 @@ function App() {
         try {
           await githubStorage.saveSubmission(submissionData);
         } catch (githubError) {
-          console.log('GitHub save failed (using localStorage only):', githubError.message);
+          // GitHub save failed, continue with localStorage only
         }
       }
       
@@ -249,12 +249,10 @@ function App() {
       try {
         // Check if EmailJS is configured
         if (serviceID === 'YOUR_SERVICE_ID_HERE' || templateID === 'YOUR_TEMPLATE_ID_HERE' || publicKey === 'YOUR_PUBLIC_KEY_HERE') {
-          // Prototype mode - show what would be sent
-          console.log('PROTOTYPE MODE - Email would be sent with:', templateParams);
+          // Prototype mode - email would be sent in production
         } else {
           // Real email sending
           await emailjs.send(serviceID, templateID, templateParams, publicKey);
-          console.log('Email sent successfully');
         }
       } catch (emailError) {
         console.error('Email failed:', emailError);

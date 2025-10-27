@@ -69,8 +69,6 @@ export class FeedbackStorage {
     };
     
     // Convert submissions to CSV rows
-    console.log('CSV Export - Processing submissions:', submissions);
-    
     const csvRows = [
       headers.join(','),
       ...submissions.map(sub => {
